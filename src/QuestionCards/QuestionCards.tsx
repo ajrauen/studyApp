@@ -1,58 +1,85 @@
-import { useEffect, useState } from "react";
-import { getFileDetails, type DriveFile, type Question } from "../utils/sheets.api";
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useState, useMemo } from "react";
+import {
+  getFileDetails,
+  type DriveFile,
+  type Question,
+} from "../utils/sheets.api";
 import { QuestionCard } from "./QuestionCard/QuestionCard";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface QuestionCardsProps {
-    fileInfo: DriveFile
+  fileInfo: DriveFile;
 }
 
 const QuestionCards = ({ fileInfo }: QuestionCardsProps) => {
-    const [questions, setQuestions] = useState<Question[]>([]);
-    const [selectedQuestion, setSelectedQuestion] = useState<Question>();
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
+    null
+  );
+  const queryClient = useQueryClient();
 
-    useEffect(() => {
-        loadQuestionday()
-    }, [fileInfo?.id])
+  const { data } = useQuery({
+    queryKey: ["fileDetails", fileInfo.id],
+    queryFn: () => getFileDetails(fileInfo.id),
+  });
 
-    const loadQuestionday = async () => {
-        const result = await getFileDetails(fileInfo.id);
-        const questions = Array.isArray(result)
-            ? result
-            : result
-                ? [result]
-                : [];
+  const questions = useMemo(
+    () => (Array.isArray(data) ? data : data ? [data] : []),
+    [data]
+  );
 
-        setQuestions(questions);
+  useEffect(() => {
+    if (questions.length > 0 && !selectedQuestion) {
+      setSelectedQuestion(questions[0]);
+    }
+  }, [questions, selectedQuestion]);
+
+  const handleNext = () => {
+    let hasValidOccuranceRatings = false;
+    let nextQuestion: Question | null = null;
+    const maxAttempts = questions.length * 3.2; // Prevent infinite loop by limiting attempts
+    let currentAttempt = 0;
+    while (!hasValidOccuranceRatings && currentAttempt <= maxAttempts) {
+      currentAttempt++;
+      const randomNumber = Math.floor(Math.random() * questions.length);
+      if (questions[randomNumber].occuranceRating !== 3) {
+        nextQuestion = questions[randomNumber];
+        hasValidOccuranceRatings = true;
+      }
     }
 
-    useEffect(() => {
-        if (questions.length > 0 && !selectedQuestion) {
-            getNextQuestion();
+    if (nextQuestion) {
+      // increment occurrence in cache so UI reflects updated rating
+      queryClient.setQueryData(["fileDetails", fileInfo.id], (oldData: any) => {
+        if (!oldData) return oldData;
+        if (Array.isArray(oldData)) {
+          return oldData.map((q) =>
+            q.id === nextQuestion.id
+              ? { ...q, occuranceRating: (q.occuranceRating ?? 0) + 1 }
+              : q
+          );
         }
-    }, [questions])
+        if ((oldData as any).id === nextQuestion.id) {
+          return {
+            ...(oldData as any),
+            occuranceRating: ((oldData as any).occuranceRating ?? 0) + 1,
+          };
+        }
+        return oldData;
+      });
 
-    const getNextQuestion = () => {
-const topFive = [...questions]
-            .sort((a, b) => (b.occuranceRating ?? 0) - (a.occuranceRating ?? 0))
-            .slice(0, 5);
-
-        const randomNumber = Math.floor(Math.random() * 5); 
-        const topQuestion = topFive[randomNumber];
-
-        setSelectedQuestion(topQuestion);
+      setSelectedQuestion(nextQuestion);
     }
+  };
 
+  return (
+    <div className="mt-[20%]">
+      {selectedQuestion && (
+        <QuestionCard question={selectedQuestion} onNext={handleNext} />
+      )}
+    </div>
+  );
+};
 
-    const handelNext = (rating: number) => {
-        console.log("Next question", rating)
-    }
-
-return (<div>
-    {selectedQuestion && (
-        <QuestionCard question={selectedQuestion} onNext={handelNext} />
-    )}
-</div>)
-
-}
-
-export { QuestionCards }
+export { QuestionCards };

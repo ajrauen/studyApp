@@ -1,120 +1,59 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Question } from "../../utils/sheets.api";
-import { Box, Button, Paper, Typography } from "@mui/material";
-
-const getRankFromElapsed = (elapsedSeconds: number) => {
-    if (elapsedSeconds < 20) return 0;
-    if (elapsedSeconds < 40) return 1;
-    return 2;
-};
+import { Button, Paper } from "@mui/material";
 
 const QuestionCard = ({
-    question,
-    onNext,
+  question,
+  onNext,
 }: {
-    question: Question;
-    onNext: (rank: number) => void;
+  question: Question;
+  onNext: (elapsedSeconds: number) => void;
 }) => {
-    const [flipped, setFlipped] = useState(false);
-    const [elapsed, setElapsed] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [startTime] = useState(() => Date.now());
 
-    useEffect(() => {
-        setFlipped(false);
-        setElapsed(0);
-        const start = Date.now();
-        const interval = window.setInterval(() => {
-            const seconds = Math.floor((Date.now() - start) / 1000);
-            setElapsed(seconds);
-        }, 1000);
+  const handleNext = () => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    onNext(elapsed);
+    setRevealed(false);
+  };
 
-        return () => window.clearInterval(interval);
-    }, [question.id]);
+  const handleReveal = () => {
+    setRevealed(!revealed);
+  };
 
-    const handleNext = () => {
-        const rank = getRankFromElapsed(elapsed);
-        onNext(rank);
-    };
+  return (
+    <Paper
+      className="w-full max-w-[700px] mx-auto p-4 transition-all duration-300"
+      elevation={3}
+      onClick={handleReveal}
+    >
+      <div className="mb-4">
+        <div className="flex text-center items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2">
+            {question.questionCategory}
+          </h3>
+          <Button
+            onClick={handleNext}
+            variant="contained"
+            color="primary"
+            className="mt-4"
+            size="small"
+          >
+            Next
+          </Button>
+        </div>
 
-    return (
-        <Paper sx={{ p: 2, maxWidth: 700, mx: 'auto' }} elevation={3}>
-            <Box sx={{ perspective: 1200 }}>
-                <Box
-                    sx={{
-                        position: 'relative',
-                        width: '100%',
-                        transformStyle: 'preserve-3d',
-                        transition: 'transform 0.6s ease',
-                        transform: flipped ? 'rotateY(180deg)' : 'none',
-                    }}
-                >
-                    {/* Front side */}
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            width: '100%',
-                            backfaceVisibility: 'hidden',
-                        }}
-                    >
-                        <Typography variant="h6" sx={{ mb: 2 }}>
-                            {question.questionCategory}
-                        </Typography>
+        <p className="text-lg font-medium mb-4">{question.question}</p>
+      </div>
 
-                        <Box sx={{ minHeight: 220, p: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="body1" align="center">
-                                {question.Question}
-                            </Typography>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mt: 2 }}>
-                            <Button variant="outlined" onClick={() => setFlipped((current) => !current)}>
-                                {flipped ? 'Show Question' : 'Show Answer'}
-                            </Button>
-                            <Button variant="contained" onClick={handleNext}>
-                                Next
-                            </Button>
-                        </Box>
-
-                        <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
-                            Time on card: {elapsed} second{elapsed === 1 ? '' : 's'}
-                        </Typography>
-                    </Box>
-
-                    {/* Back side */}
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            width: '100%',
-                            backfaceVisibility: 'hidden',
-                            transform: 'rotateY(180deg)',
-                        }}
-                    >
-                        <Typography variant="h6" sx={{ mb: 2 }}>
-                            {question.questionCategory}
-                        </Typography>
-
-                        <Box sx={{ minHeight: 220, p: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="body1" align="center">
-                                {question.answer}
-                            </Typography>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mt: 2 }}>
-                            <Button variant="outlined" onClick={() => setFlipped((current) => !current)}>
-                                {flipped ? 'Show Question' : 'Show Answer'}
-                            </Button>
-                            <Button variant="contained" onClick={handleNext}>
-                                Next
-                            </Button>
-                        </Box>
-
-                        <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
-                            Time on card: {elapsed} second{elapsed === 1 ? '' : 's'}
-                        </Typography>
-                    </Box>
-                </Box>
-            </Box>
-        </Paper>
-    );
+      {revealed && (
+        <div className="border-t pt-4 mb-4">
+          <p className="text-base text-gray-700">{question.answer}</p>
+        </div>
+      )}
+    </Paper>
+  );
 };
 
 export { QuestionCard };
