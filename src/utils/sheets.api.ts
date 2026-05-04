@@ -7,6 +7,15 @@ export interface DriveFile {
   type: string;
 }
 
+export interface Question{
+  id: string
+  question: string
+  category: string
+  questionCategory: string
+  answer: string
+  occuranceRating: number
+}
+
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyTR_en0983973EeJRARtD6iyNU4JCEGS5Ipzfb6-hzej2pUlafoJ-9lUyPc5jorCsk/exec";
 const SECRET_KEY = "your_secure_random_string_here";
 
@@ -50,7 +59,7 @@ export const getFolderFiles = async (): Promise<DriveFile[]> => {
  * Fetches a list of files from a specific Google Drive folder.
  * @param folderId The ID of the folder (found in the URL of the folder in Drive)
  */
-export const getFileDetails = async (fileId: string): Promise<DriveFile[]> => {
+export const getFileDetails = async (fileId: string): Promise<Question[]> => {
   try {
     const response = await fetch(GAS_URL, {
       method: 'POST',
@@ -75,7 +84,7 @@ export const getFileDetails = async (fileId: string): Promise<DriveFile[]> => {
       return [];
     }
 
-    return data as DriveFile[];
+    return data as Question[];
   } catch (error) {
     console.error("Error fetching file list:", error);
     return [];
