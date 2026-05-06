@@ -29,48 +29,42 @@ const QuestionCards = ({ fileInfo }: QuestionCardsProps) => {
     [data]
   );
 
+  const getRandomNumber = (min: number, max: number) => {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  };
+
   useEffect(() => {
     if (questions.length > 0 && !selectedQuestion) {
-      setSelectedQuestion(questions[0]);
+      setSelectedQuestion(questions[getRandomNumber(0, questions.length - 1)]);
     }
   }, [questions, selectedQuestion]);
 
-  const handleNext = () => {
-    let hasValidOccuranceRatings = false;
-    let nextQuestion: Question | null = null;
-    const maxAttempts = questions.length * 3.2; // Prevent infinite loop by limiting attempts
-    let currentAttempt = 0;
-    while (!hasValidOccuranceRatings && currentAttempt <= maxAttempts) {
-      currentAttempt++;
-      const randomNumber = Math.floor(Math.random() * questions.length);
-      if (questions[randomNumber].occuranceRating !== 3) {
-        nextQuestion = questions[randomNumber];
-        hasValidOccuranceRatings = true;
-      }
+  const handleNext = (id: string) => {
+    queryClient.setQueryData(["fileDetails", fileInfo.id], (oldData: any) => {
+      const question = oldData.find((q: Question) => q.id === id);
+      question.occuranceRating += 1;
+      return oldData;
+    });
+
+    if (!questions || questions.length == 0) return;
+
+    const minRating = getMinRating(questions);
+    if (minRating == 5) {
+      alert("Your done for now. Reset if you must");
+      return;
     }
 
-    if (nextQuestion) {
-      // increment occurrence in cache so UI reflects updated rating
-      queryClient.setQueryData(["fileDetails", fileInfo.id], (oldData: any) => {
-        if (!oldData) return oldData;
-        if (Array.isArray(oldData)) {
-          return oldData.map((q) =>
-            q.id === nextQuestion.id
-              ? { ...q, occuranceRating: (q.occuranceRating ?? 0) + 1 }
-              : q
-          );
-        }
-        if ((oldData as any).id === nextQuestion.id) {
-          return {
-            ...(oldData as any),
-            occuranceRating: ((oldData as any).occuranceRating ?? 0) + 1,
-          };
-        }
-        return oldData;
-      });
+    const nextQuestions = questions.filter(
+      (q) => q.occuranceRating == minRating
+    );
+    const randomIndex = getRandomNumber(0, nextQuestions.length - 1);
+    const nextQuestion = nextQuestions[randomIndex];
 
-      setSelectedQuestion(nextQuestion);
-    }
+    setSelectedQuestion(nextQuestion);
+  };
+
+  const getMinRating = (questions: Question[]) => {
+    return Math.min(...questions.map((q) => q.occuranceRating));
   };
 
   return (

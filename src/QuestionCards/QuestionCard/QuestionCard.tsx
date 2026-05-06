@@ -7,14 +7,13 @@ const QuestionCard = ({
   onNext,
 }: {
   question: Question;
-  onNext: (elapsedSeconds: number) => void;
+  onNext: (id: string) => void;
 }) => {
   const [revealed, setRevealed] = useState(false);
-  const [startTime] = useState(() => Date.now());
 
-  const handleNext = () => {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    onNext(elapsed);
+  const handleNext = (evt: React.MouseEvent<HTMLButtonElement>) => {
+    evt.stopPropagation(); // Prevent the click from propagating to the Paper component
+    onNext(question.id);
     setRevealed(false);
   };
 
